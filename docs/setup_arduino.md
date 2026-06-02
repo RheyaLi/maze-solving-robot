@@ -80,8 +80,9 @@ pio device monitor
 - Confirm B1/B2 forward PWM wiring before running forward movement.
 - Confirm D14-D16 and D30 state LEDs indicate `STATE_MOVE_LEFT`, `STATE_MOVE_RIGHT`, `STATE_CONFIRM_GAP`, and `STATE_FORWARD`.
 - Confirm encoder channel A/B wiring on D2/D18/D19/D20 and D22/D24/D26/D28. Channel A uses `RISING`; channel B uses `INPUT_PULLUP`.
+- Confirm Role 2 sensor integration: switches are on D7/D4 in the main robot because D2/D3 are reserved, and photodiodes are on A4/A5 with wall threshold 100.
 - Both `LEFT_MOVE_ENCODER_INDEX` and `RIGHT_MOVE_ENCODER_INDEX` currently use M1 Front Left because that encoder has been validated.
-- `USE_DUMMY_ENCODERS` is currently `false` because the Role 4 encoder wiring and `182` counts/rev measurement have been validated. Set `USE_DUMMY_SENSORS` to `false` only after the real sensor subsystem is integrated.
+- `USE_DUMMY_SENSORS` and `USE_DUMMY_ENCODERS` are currently `false` because the Role 2 sensor wiring and Role 4 encoder wiring have been validated.
 - Test with wheels raised before testing in the maze.
 
 ## Future Libraries

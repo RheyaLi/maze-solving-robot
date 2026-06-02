@@ -56,8 +56,10 @@ Current placeholder constants are defined in `config.h` and must be replaced wit
 
 Current threshold behavior:
 
-- `frontBlocked` is true when `frontRaw >= FRONT_BLOCKED_THRESHOLD`.
-- `frontClear` is true when `frontRaw <= FRONT_CLEAR_THRESHOLD`.
+- `frontBlocked` is true when `frontRaw > FRONT_WALL_THRESHOLD`.
+- `frontClear` is true when `frontBlocked` is false.
+- `rearWallDetected` is true when `rearRaw > REAR_WALL_THRESHOLD`; the rear sensor is printed for debug/status but is not currently used by the FSM.
+- Left/right side switches are debounced for 50 ms before updating `leftWallHit` and `rightWallHit`.
 
 Current source files:
 

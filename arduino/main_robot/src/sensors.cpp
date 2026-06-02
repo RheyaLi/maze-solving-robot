@@ -12,6 +12,29 @@ const int DUMMY_REAR_RAW = 200;
 const bool DUMMY_SIDE_CLEAR = false;
 const bool DUMMY_SIDE_HIT = true;
 
+static int leftStableState = LOW;
+static int leftLastReading = LOW;
+static unsigned long leftLastDebounceTime = 0;
+
+static int rightStableState = LOW;
+static int rightLastReading = LOW;
+static unsigned long rightLastDebounceTime = 0;
+
+static int readDebouncedSwitch(int pin, int &stableState, int &lastReading, unsigned long &lastDebounceTime) {
+  const int reading = digitalRead(pin);
+
+  if (reading != lastReading) {
+    lastDebounceTime = millis();
+  }
+
+  if (millis() - lastDebounceTime > SWITCH_DEBOUNCE_MS) {
+    stableState = reading;
+  }
+
+  lastReading = reading;
+  return stableState;
+}
+
 static SensorData readDummySensors() {
   SensorData s;
 
@@ -23,6 +46,7 @@ static SensorData readDummySensors() {
   s.rearRaw = DUMMY_REAR_RAW;
   s.frontBlocked = false;
   s.frontClear = true;
+  s.rearWallDetected = false;
   s.leftWallHit = DUMMY_SIDE_CLEAR;
   s.rightWallHit = DUMMY_SIDE_CLEAR;
 
@@ -48,8 +72,6 @@ static SensorData readDummySensors() {
 }
 
 void initSensors() {
-  // TODO: Sensor subsystem must confirm INPUT vs INPUT_PULLUP wiring.
-  // Default: external circuit handles pull-up/pull-down, so use INPUT.
   pinMode(LEFT_SIDE_SWITCH_PIN, INPUT);
   pinMode(RIGHT_SIDE_SWITCH_PIN, INPUT);
 
@@ -65,17 +87,26 @@ SensorData readSensors() {
   SensorData s;
 
   s.frontRaw = analogRead(FRONT_PHOTODIODE_PIN);
-  // Rear sensor is connected but currently used only for Serial debug output.
   s.rearRaw = analogRead(REAR_PHOTODIODE_PIN);
 
-  // TODO: Confirm photodiode polarity on hardware. Default: larger value = closer wall.
-  // Use two thresholds to avoid state jumping near the boundary.
-  s.frontBlocked = s.frontRaw >= FRONT_BLOCKED_THRESHOLD;     
-  s.frontClear   = s.frontRaw <= FRONT_CLEAR_THRESHOLD;
+  s.frontBlocked = s.frontRaw > FRONT_WALL_THRESHOLD;
+  s.frontClear   = !s.frontBlocked;
+  s.rearWallDetected = s.rearRaw > REAR_WALL_THRESHOLD;
 
-  // TODO: Confirm switch polarity on hardware. Default: pressed/hit = HIGH.
-  s.leftWallHit  = digitalRead(LEFT_SIDE_SWITCH_PIN) == HIGH;
-  s.rightWallHit = digitalRead(RIGHT_SIDE_SWITCH_PIN) == HIGH;
+  const int leftState = readDebouncedSwitch(
+      LEFT_SIDE_SWITCH_PIN,
+      leftStableState,
+      leftLastReading,
+      leftLastDebounceTime);
+
+  const int rightState = readDebouncedSwitch(
+      RIGHT_SIDE_SWITCH_PIN,
+      rightStableState,
+      rightLastReading,
+      rightLastDebounceTime);
+
+  s.leftWallHit = leftState == HIGH;
+  s.rightWallHit = rightState == HIGH;
 
   return s;
 }
@@ -86,6 +117,9 @@ void printSensors(const SensorData &s) {
 
   Serial.print(" | Rear: ");
   Serial.print(s.rearRaw);
+
+  Serial.print(" | RearWall: ");
+  Serial.print(s.rearWallDetected);
 
   Serial.print(" | FrontBlocked: ");
   Serial.print(s.frontBlocked);

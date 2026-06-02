@@ -6,11 +6,31 @@
 // Keep these at the top so the framework demo can be enabled quickly.
 // Set them to false only when the matching real subsystem is integrated.
 const bool USE_DUMMY_MOTORS = false;
-const bool USE_DUMMY_SENSORS = true;
+const bool USE_DUMMY_SENSORS = false;
 const bool USE_DUMMY_ENCODERS = false;
 
 // Dummy encoder count added each time the FSM checks gap-entry distance.
 const long DUMMY_ENCODER_COUNTS_PER_READ = 2;
+
+// =============================
+// Integration TODOs to verify on the assembled robot
+// - Confirm main-robot switch wiring on D7/D4. Role 2 tested D2/D3, but those
+//   pins conflict with M1 encoder A and forward PWM in the integrated robot.
+// - Re-check front/rear photodiode thresholds on A4/A5 under maze lighting.
+//   Current wall threshold is 100 from Role 2 standalone testing.
+// - Confirm front sensor polarity on the assembled robot: current logic treats
+//   raw > FRONT_WALL_THRESHOLD as wall detected.
+// - Confirm Motor Shield Rev3 forward direction: current convention is
+//   A direction HIGH and B direction LOW.
+// - Confirm Motor Shield brake behavior: D9/D8 HIGH should stop/hold B1/B2.
+// - Confirm M3/M4 self-made H-bridge direction: both forward = left movement,
+//   both reverse = right movement.
+// - Confirm M1 encoder remains reliable for both left and right gap-confirm
+//   moves. Distance uses abs(count), so sign reversal is acceptable.
+// - Re-measure ENCODER_COUNTS_PER_REV if the wheel, encoder trigger mode, or
+//   motor wiring changes. Current value 182 was measured with A RISING.
+// - Tune GAP_CONFIRM_MS and GAP_ENTRY_REDUNDANCY_MM after full-car maze tests.
+// =============================
 
 // =============================
 // Reserved pins
@@ -21,7 +41,7 @@ const long DUMMY_ENCODER_COUNTS_PER_READ = 2;
 // D34/D36 and D38/D40 are reserved for the two self-made H-bridges.
 // D2/D18/D19/D20 are reserved for encoder channel A interrupts.
 // D14-D16 and D30 are reserved for state indicator LEDs.
-// Use A2-A5 for analog sensors.
+// Use A4-A5 for the validated Role 2 photodiode sensors.
 // =============================
 
 // ----- Project pins -----
@@ -41,8 +61,11 @@ const int A1_H_BRIDGE_IN2_PIN = 36;
 const int A2_H_BRIDGE_IN1_PIN = 38;
 const int A2_H_BRIDGE_IN2_PIN = 40;
 
-const int FRONT_PHOTODIODE_PIN    = A2;
-const int REAR_PHOTODIODE_PIN     = A3;
+// Role 2 validated sensor wiring used D2/D3 for switches, but those conflict
+// with M1 encoder A (D2) and forward PWM (D3). Main integration keeps switches
+// on D7/D4 and uses the validated photodiode analog pins A4/A5.
+const int FRONT_PHOTODIODE_PIN    = A4;
+const int REAR_PHOTODIODE_PIN     = A5;
 
 // ----- Encoder pins -----
 // Channel A pins use RISING interrupts. When A rises, the ISR reads channel B to
@@ -74,8 +97,9 @@ const int FORWARD_MOTOR_A_BRAKE_PIN = 9;
 const int FORWARD_MOTOR_B_BRAKE_PIN = 8;
 
 // ----- Tunable parameters -----
-const int FRONT_BLOCKED_THRESHOLD = 430;
-const int FRONT_CLEAR_THRESHOLD   = 350;
+const int FRONT_WALL_THRESHOLD = 100;
+const int REAR_WALL_THRESHOLD  = 100;
+const unsigned long SWITCH_DEBOUNCE_MS = 50;
 
 const int FORWARD_PWM = 130;
 const int SIDE_PWM    = 130;

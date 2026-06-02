@@ -7,6 +7,7 @@ struct SensorData {
 
   bool frontBlocked;
   bool frontClear;
+  bool rearWallDetected;
 
   bool leftWallHit;
   bool rightWallHit;

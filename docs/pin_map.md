@@ -20,8 +20,8 @@
 | D40 | `A2_H_BRIDGE_IN2_PIN` | M4_B side motor input, reverse |
 | D3 | `B1_FORWARD_PWM_PIN` | B1 forward motor PWM, fixed at 130 |
 | D11 | `B2_FORWARD_PWM_PIN` | B2 forward motor PWM, fixed at 130 |
-| A2 | `FRONT_PHOTODIODE_PIN` | front photodiode |
-| A3 | `REAR_PHOTODIODE_PIN` | rear photodiode |
+| A4 | `FRONT_PHOTODIODE_PIN` | front photodiode, Role 2 validated analog output |
+| A5 | `REAR_PHOTODIODE_PIN` | rear photodiode, Role 2 validated analog output |
 
 Current pin source of truth: `arduino/main_robot/src/config.h`.
 
@@ -65,18 +65,20 @@ uses `LEFT_MOVE_ENCODER_INDEX`, and right movement uses
 that encoder has been validated. The distance calculation uses `abs(count)`,
 so opposite sign during the opposite side movement is acceptable.
 
-D2 is reserved for Encoder 1 channel A. The left side switch was moved to D7
-to avoid sharing a pin with the encoder interrupt.
+D2 is reserved for Encoder 1 channel A and D3 is reserved for forward PWM.
+The Role 2 standalone sensor test used D2/D3 for switches, but main
+integration keeps the side switches on D7/D4 to avoid those conflicts.
 
 ## Analog Pins
 
-Use A2-A5 for analog sensors in the current project layout.
+Use A4-A5 for the validated Role 2 photodiode sensors in the current project
+layout.
 
 | Pin | Use |
 |---|---|
 | A0 | Spare |
 | A1 | Spare |
-| A2 | front photodiode |
-| A3 | rear photodiode |
-| A4 | Spare |
-| A5 | Spare |
+| A2 | Spare |
+| A3 | Spare |
+| A4 | front photodiode |
+| A5 | rear photodiode |

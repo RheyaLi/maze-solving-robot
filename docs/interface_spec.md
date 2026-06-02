@@ -16,17 +16,18 @@
 | LED | Move-left status LED | Output | Digital | D14 | `MOVE_LEFT_LED_PIN` | HIGH during `STATE_MOVE_LEFT`, otherwise LOW |
 | LED | Move-right status LED | Output | Digital | D15 | `MOVE_RIGHT_LED_PIN` | HIGH during `STATE_MOVE_RIGHT`, otherwise LOW |
 | LED | Confirm-gap status LED | Output | Digital | D16 | `CONFIRM_GAP_LED_PIN` | HIGH during `STATE_CONFIRM_GAP`, otherwise LOW |
-| Sensor | Left side switch | Input | Digital | D7 | `LEFT_SIDE_SWITCH_PIN` | Default: hit = HIGH, polarity to be confirmed |
-| Sensor | Right side switch | Input | Digital | D4 | `RIGHT_SIDE_SWITCH_PIN` | Default: hit = HIGH, polarity to be confirmed |
-| Sensor | Front photodiode | Input | Analog | A2 | `FRONT_PHOTODIODE_PIN` | Default: larger value = closer wall |
-| Sensor | Rear photodiode | Input | Analog | A3 | `REAR_PHOTODIODE_PIN` | Connected, currently debug only |
+| Sensor | Left side switch | Input | Digital | D7 | `LEFT_SIDE_SWITCH_PIN` | Debounced 50 ms; hit = HIGH |
+| Sensor | Right side switch | Input | Digital | D4 | `RIGHT_SIDE_SWITCH_PIN` | Debounced 50 ms; hit = HIGH |
+| Sensor | Front photodiode | Input | Analog | A4 | `FRONT_PHOTODIODE_PIN` | Role 2 validated; wall when raw > 100 |
+| Sensor | Rear photodiode | Input | Analog | A5 | `REAR_PHOTODIODE_PIN` | Role 2 validated; wall when raw > 100, debug/status only |
 | Encoder | Encoder 1 / M1 Front Left | Input | A RISING interrupt / B read | D2 / D22 | `ENCODER_A_PINS[0]`, `ENCODER_B_PINS[0]` | A rising ISR reads B; B LOW increments count |
 | Encoder | Encoder 2 / M2 Rear Left | Input | A RISING interrupt / B read | D18 / D24 | `ENCODER_A_PINS[1]`, `ENCODER_B_PINS[1]` | A rising ISR reads B; B LOW increments count |
 | Encoder | Encoder 3 / M3 Front Right | Input | A RISING interrupt / B read | D19 / D26 | `ENCODER_A_PINS[2]`, `ENCODER_B_PINS[2]` | A rising ISR reads B; B LOW increments count |
 | Encoder | Encoder 4 / M4 Rear Right | Input | A RISING interrupt / B read | D20 / D28 | `ENCODER_A_PINS[3]`, `ENCODER_B_PINS[3]` | A rising ISR reads B; B LOW increments count |
 
-D2 is reserved for Encoder 1 channel A. The left side switch was moved to D7
-to avoid sharing a pin with the encoder interrupt.
+D2 is reserved for Encoder 1 channel A and D3 is reserved for forward PWM.
+The Role 2 standalone sensor test used D2/D3 for switches, but main
+integration keeps the side switches on D7/D4 to avoid those conflicts.
 
 ## 2. Motor Interface
 
@@ -56,12 +57,13 @@ void printSensors(const SensorData &s);
 
 | Data Field | Type | Source | Meaning |
 |---|---|---|---|
-| `frontRaw` | `int` | A2 / dummy | Raw front photodiode value |
-| `rearRaw` | `int` | A3 / dummy | Raw rear photodiode value, debug only |
-| `frontBlocked` | `bool` | `frontRaw >= FRONT_BLOCKED_THRESHOLD` | Front wall detected |
-| `frontClear` | `bool` | `frontRaw <= FRONT_CLEAR_THRESHOLD` | Gap/front clear detected |
-| `leftWallHit` | `bool` | D7 / dummy | Left side switch hit |
-| `rightWallHit` | `bool` | D4 / dummy | Right side switch hit |
+| `frontRaw` | `int` | A4 / dummy | Raw front photodiode value |
+| `rearRaw` | `int` | A5 / dummy | Raw rear photodiode value |
+| `frontBlocked` | `bool` | `frontRaw > FRONT_WALL_THRESHOLD` | Front wall detected |
+| `frontClear` | `bool` | `!frontBlocked` | Gap/front clear detected |
+| `rearWallDetected` | `bool` | `rearRaw > REAR_WALL_THRESHOLD` | Rear wall/debug status |
+| `leftWallHit` | `bool` | D7 debounced / dummy | Left side switch hit |
+| `rightWallHit` | `bool` | D4 debounced / dummy | Right side switch hit |
 
 ## 4. FSM Interface
 
@@ -141,7 +143,7 @@ enum RobotState {
 | Switch | Current Value | Effect |
 |---|---:|---|
 | `USE_DUMMY_MOTORS` | `false` | Motor commands write real PWM/digital outputs |
-| `USE_DUMMY_SENSORS` | `true` | `readSensors()` returns dummy sensor sequence |
+| `USE_DUMMY_SENSORS` | `false` | Real Role 2 sensor inputs are used |
 | `USE_DUMMY_ENCODERS` | `false` | Real encoder interrupts are used |
 | `ENABLE_DEBUG_PRINT` | `true` | Serial Monitor prints sensor/action debug output |
 
