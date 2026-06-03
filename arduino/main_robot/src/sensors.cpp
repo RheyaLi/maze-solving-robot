@@ -20,6 +20,8 @@ static int rightStableState = LOW;
 static int rightLastReading = LOW;
 static unsigned long rightLastDebounceTime = 0;
 
+static bool frontBlockedState = false;
+
 static int readDebouncedSwitch(int pin, int &stableState, int &lastReading, unsigned long &lastDebounceTime) {
   const int reading = digitalRead(pin);
 
@@ -33,6 +35,24 @@ static int readDebouncedSwitch(int pin, int &stableState, int &lastReading, unsi
 
   lastReading = reading;
   return stableState;
+}
+
+static bool switchStateIsHit(int stableState) {
+  if (SIDE_SWITCH_HIT_IS_HIGH) {
+    return stableState == HIGH;
+  }
+
+  return stableState == LOW;
+}
+
+static bool updateFrontBlockedState(int frontRaw) {
+  if (frontRaw >= FRONT_BLOCKED_THRESHOLD) {
+    frontBlockedState = true;
+  } else if (frontRaw <= FRONT_CLEAR_THRESHOLD) {
+    frontBlockedState = false;
+  }
+
+  return frontBlockedState;
 }
 
 static SensorData readDummySensors() {
@@ -72,8 +92,9 @@ static SensorData readDummySensors() {
 }
 
 void initSensors() {
-  pinMode(LEFT_SIDE_SWITCH_PIN, INPUT);
-  pinMode(RIGHT_SIDE_SWITCH_PIN, INPUT);
+  const int switchInputMode = SIDE_SWITCHES_USE_INTERNAL_PULLUPS ? INPUT_PULLUP : INPUT;
+  pinMode(LEFT_SIDE_SWITCH_PIN, switchInputMode);
+  pinMode(RIGHT_SIDE_SWITCH_PIN, switchInputMode);
 
   pinMode(FRONT_PHOTODIODE_PIN, INPUT);
   pinMode(REAR_PHOTODIODE_PIN, INPUT);
@@ -89,7 +110,7 @@ SensorData readSensors() {
   s.frontRaw = analogRead(FRONT_PHOTODIODE_PIN);
   s.rearRaw = analogRead(REAR_PHOTODIODE_PIN);
 
-  s.frontBlocked = s.frontRaw > FRONT_WALL_THRESHOLD;
+  s.frontBlocked = updateFrontBlockedState(s.frontRaw);
   s.frontClear   = !s.frontBlocked;
   s.rearWallDetected = s.rearRaw > REAR_WALL_THRESHOLD;
 
@@ -105,8 +126,8 @@ SensorData readSensors() {
       rightLastReading,
       rightLastDebounceTime);
 
-  s.leftWallHit = leftState == HIGH;
-  s.rightWallHit = rightState == HIGH;
+  s.leftWallHit = switchStateIsHit(leftState);
+  s.rightWallHit = switchStateIsHit(rightState);
 
   return s;
 }

@@ -39,10 +39,12 @@ for Motor Shield Rev3 channel B direction and must not be used as an LED pin.
 | D13 | `FORWARD_MOTOR_B_DIRECTION_PIN` | B direction, LOW for the Role 4 forward convention |
 | D9 | `FORWARD_MOTOR_A_BRAKE_PIN` | A brake, HIGH in `stopMotors()`, LOW in `driveForward()` |
 | D8 | `FORWARD_MOTOR_B_BRAKE_PIN` | B brake, HIGH in `stopMotors()`, LOW in `driveForward()` |
-| D34/D36 | `A1_H_BRIDGE_IN1_PIN`, `A1_H_BRIDGE_IN2_PIN` | M3 side motor, digital direction control |
-| D38/D40 | `A2_H_BRIDGE_IN1_PIN`, `A2_H_BRIDGE_IN2_PIN` | M4 side motor, digital direction control |
+| D34/D36 | `A1_H_BRIDGE_IN1_PIN`, `A1_H_BRIDGE_IN2_PIN` | M3 side motor, digital R3 direction control |
+| D38/D40 | `A2_H_BRIDGE_IN1_PIN`, `A2_H_BRIDGE_IN2_PIN` | M4 side motor, digital R3 direction control |
 
-B1/B2 do not use H-bridges in the current design. M3/M4 each use one self-made H-bridge.
+B1/B2 use Motor Shield Rev3 PWM/brake/direction control. M3/M4 each use one
+self-made H-bridge. Side movement follows the validated R3 logic: left sets
+M3/M4 forward, and right sets M3/M4 reverse.
 
 ## Encoder Pins
 
@@ -54,20 +56,34 @@ B1/B2 do not use H-bridges in the current design. M3/M4 each use one self-made H
 | Encoder 4 | M4 Rear Right | D20 | D28 | A uses RISING interrupt; B uses `INPUT_PULLUP` and is read inside the ISR |
 
 The encoder pins are initialized in `initEncoders()`. In the current checked-in
-configuration, `USE_DUMMY_ENCODERS = false`, so the FSM uses real interrupt
-counts from the four encoder inputs. The direction convention follows the
-validated Role 4 encoder test: when channel A rises, channel B LOW increments
-the count; channel B HIGH decrements the count.
+configuration, `USE_DUMMY_ENCODERS = true`, so the FSM uses dummy encoder
+counts for integration testing. Set `USE_DUMMY_ENCODERS` to `false` to use real
+interrupt counts from the four encoder inputs. The real encoder direction
+convention follows the validated Role 4 encoder test: when channel A rises,
+channel B LOW increments the count; channel B HIGH decrements the count.
+Encoder/mechanical team confirmation: M1/M2 are front/back movement wheels;
+M3/M4 are left/right movement wheels.
 Encoder readings are used only for distance/gap checks, not for motor speed control.
 During `STATE_CONFIRM_GAP`, the FSM selects exactly one encoder: left movement
 uses `LEFT_MOVE_ENCODER_INDEX`, and right movement uses
-`RIGHT_MOVE_ENCODER_INDEX`. Both are currently set to M1 Front Left because
-that encoder has been validated. The distance calculation uses `abs(count)`,
-so opposite sign during the opposite side movement is acceptable.
+`RIGHT_MOVE_ENCODER_INDEX`. Both are currently set to M3 Front Right because
+the encoder team confirmed M3 is used for left/right movement. The distance
+calculation uses `abs(count)`, so opposite sign during the opposite side
+movement is acceptable.
 
 D2 is reserved for Encoder 1 channel A and D3 is reserved for forward PWM.
 The Role 2 standalone sensor test used D2/D3 for switches, but main
 integration keeps the side switches on D7/D4 to avoid those conflicts.
+Side switch debounce, hit polarity, and optional internal pull-ups are
+configured in `config.h`.
+
+## Current Dummy Switches
+
+| Switch | Current Value | Meaning |
+|---|---:|---|
+| `USE_DUMMY_MOTORS` | `false` | Motor commands write real outputs |
+| `USE_DUMMY_SENSORS` | `true` | FSM uses dummy sensor sequence instead of A4/A5 and D7/D4 |
+| `USE_DUMMY_ENCODERS` | `true` | FSM uses dummy encoder counts instead of real interrupts |
 
 ## Analog Pins
 

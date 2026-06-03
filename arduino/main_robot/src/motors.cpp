@@ -8,8 +8,7 @@ static void printDummyMotorCommand(const char* action) {
   Serial.print(action);
   Serial.print(" forward_pwm=");
   Serial.print(FORWARD_PWM);
-  Serial.print(" side_pwm=");
-  Serial.println(SIDE_PWM);
+  Serial.println();
 }
 
 static void stopForwardMotors() {
@@ -90,7 +89,7 @@ void moveLeft() {
     return;
   }
 
-  // M3/M4 side motors both run forward for left movement.
+  // R3 logic: M3 and M4 both run forward for left movement.
   stopForwardMotors();
   engageForwardBrakes();
   digitalWrite(A1_H_BRIDGE_IN1_PIN, HIGH);
@@ -105,7 +104,7 @@ void moveRight() {
     return;
   }
 
-  // M3/M4 side motors both run reverse for right movement.
+  // R3 logic: M3 and M4 both run reverse for right movement.
   stopForwardMotors();
   engageForwardBrakes();
   digitalWrite(A1_H_BRIDGE_IN1_PIN, LOW);

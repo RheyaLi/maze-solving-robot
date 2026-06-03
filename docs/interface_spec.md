@@ -10,15 +10,15 @@
 | Motor Shield | Forward motor B direction | Output | Digital | D13 | `FORWARD_MOTOR_B_DIRECTION_PIN` | LOW for Role 4 forward convention |
 | Motor Shield | Forward motor A brake | Output | Digital | D9 | `FORWARD_MOTOR_A_BRAKE_PIN` | HIGH = brake engaged, LOW = released |
 | Motor Shield | Forward motor B brake | Output | Digital | D8 | `FORWARD_MOTOR_B_BRAKE_PIN` | HIGH = brake engaged, LOW = released |
-| H-bridge | M3 side motor inputs | Output | Digital | D34/D36 | `A1_H_BRIDGE_IN1_PIN`, `A1_H_BRIDGE_IN2_PIN` | M3 forward for left, reverse for right |
-| H-bridge | M4 side motor inputs | Output | Digital | D38/D40 | `A2_H_BRIDGE_IN1_PIN`, `A2_H_BRIDGE_IN2_PIN` | M4 forward for left, reverse for right |
+| H-bridge | M3 side motor inputs | Output | Digital | D34/D36 | `A1_H_BRIDGE_IN1_PIN`, `A1_H_BRIDGE_IN2_PIN` | R3 logic: forward for left, reverse for right |
+| H-bridge | M4 side motor inputs | Output | Digital | D38/D40 | `A2_H_BRIDGE_IN1_PIN`, `A2_H_BRIDGE_IN2_PIN` | R3 logic: forward for left, reverse for right |
 | LED | Forward status LED | Output | Digital | D30 | `FORWARD_LED_PIN` | HIGH during `STATE_FORWARD`, otherwise LOW |
 | LED | Move-left status LED | Output | Digital | D14 | `MOVE_LEFT_LED_PIN` | HIGH during `STATE_MOVE_LEFT`, otherwise LOW |
 | LED | Move-right status LED | Output | Digital | D15 | `MOVE_RIGHT_LED_PIN` | HIGH during `STATE_MOVE_RIGHT`, otherwise LOW |
 | LED | Confirm-gap status LED | Output | Digital | D16 | `CONFIRM_GAP_LED_PIN` | HIGH during `STATE_CONFIRM_GAP`, otherwise LOW |
-| Sensor | Left side switch | Input | Digital | D7 | `LEFT_SIDE_SWITCH_PIN` | Debounced 50 ms; hit = HIGH |
-| Sensor | Right side switch | Input | Digital | D4 | `RIGHT_SIDE_SWITCH_PIN` | Debounced 50 ms; hit = HIGH |
-| Sensor | Front photodiode | Input | Analog | A4 | `FRONT_PHOTODIODE_PIN` | Role 2 validated; wall when raw > 100 |
+| Sensor | Left side switch | Input | Digital | D7 | `LEFT_SIDE_SWITCH_PIN` | Debounced 50 ms; hit polarity from `SIDE_SWITCH_HIT_IS_HIGH` |
+| Sensor | Right side switch | Input | Digital | D4 | `RIGHT_SIDE_SWITCH_PIN` | Debounced 50 ms; hit polarity from `SIDE_SWITCH_HIT_IS_HIGH` |
+| Sensor | Front photodiode | Input | Analog | A4 | `FRONT_PHOTODIODE_PIN` | Hysteresis: blocked at >= 100, clear at <= 80 |
 | Sensor | Rear photodiode | Input | Analog | A5 | `REAR_PHOTODIODE_PIN` | Role 2 validated; wall when raw > 100, debug/status only |
 | Encoder | Encoder 1 / M1 Front Left | Input | A RISING interrupt / B read | D2 / D22 | `ENCODER_A_PINS[0]`, `ENCODER_B_PINS[0]` | A rising ISR reads B; B LOW increments count |
 | Encoder | Encoder 2 / M2 Rear Left | Input | A RISING interrupt / B read | D18 / D24 | `ENCODER_A_PINS[1]`, `ENCODER_B_PINS[1]` | A rising ISR reads B; B LOW increments count |
@@ -41,10 +41,10 @@ void moveRight();
 
 | Function | Input | Output / Effect | Notes |
 |---|---|---|---|
-| `stopMotors()` | none | B1/B2 PWM pins write 0; A/B brakes HIGH; M3/M4 H-bridges are off | Safety stop / `STATE_STOPPING` |
+| `stopMotors()` | none | B1/B2 PWM pins write 0; A/B brakes HIGH; M3/M4 H-bridge inputs LOW | Safety stop / `STATE_STOPPING` |
 | `driveForward()` | none | Direction A HIGH, direction B LOW; A/B brakes LOW; B1/B2 PWM pins write `FORWARD_PWM = 130`; M3/M4 side motors are off | Forward movement only |
-| `moveLeft()` | none | B1/B2 off; A/B brakes HIGH; M3 and M4 both forward: IN_A HIGH, IN_B LOW | Left/side movement |
-| `moveRight()` | none | B1/B2 off; A/B brakes HIGH; M3 and M4 both reverse: IN_A LOW, IN_B HIGH | Right/side movement |
+| `moveLeft()` | none | B1/B2 off; A/B brakes HIGH; M3/M4 forward: IN1 HIGH, IN2 LOW | Left/side movement |
+| `moveRight()` | none | B1/B2 off; A/B brakes HIGH; M3/M4 reverse: IN1 LOW, IN2 HIGH | Right/side movement |
 
 No public backward command is currently part of the framework.
 
@@ -57,13 +57,13 @@ void printSensors(const SensorData &s);
 
 | Data Field | Type | Source | Meaning |
 |---|---|---|---|
-| `frontRaw` | `int` | A4 / dummy | Raw front photodiode value |
-| `rearRaw` | `int` | A5 / dummy | Raw rear photodiode value |
-| `frontBlocked` | `bool` | `frontRaw > FRONT_WALL_THRESHOLD` | Front wall detected |
+| `frontRaw` | `int` | A4 when real / dummy sequence when enabled | Raw front photodiode value |
+| `rearRaw` | `int` | A5 when real / dummy sequence when enabled | Raw rear photodiode value |
+| `frontBlocked` | `bool` | hysteresis state | Front wall detected; set true at `frontRaw >= FRONT_BLOCKED_THRESHOLD`, false at `frontRaw <= FRONT_CLEAR_THRESHOLD` |
 | `frontClear` | `bool` | `!frontBlocked` | Gap/front clear detected |
 | `rearWallDetected` | `bool` | `rearRaw > REAR_WALL_THRESHOLD` | Rear wall/debug status |
-| `leftWallHit` | `bool` | D7 debounced / dummy | Left side switch hit |
-| `rightWallHit` | `bool` | D4 debounced / dummy | Right side switch hit |
+| `leftWallHit` | `bool` | D7 debounced when real / dummy sequence when enabled | Left side switch hit |
+| `rightWallHit` | `bool` | D4 debounced when real / dummy sequence when enabled | Right side switch hit |
 
 ## 4. FSM Interface
 
@@ -97,10 +97,10 @@ bool gapEntryDistanceReached();
 | `initEncoders()` | None | Initializes four encoder subsystems, sets channel B pins to `INPUT_PULLUP`, and attaches channel A `RISING` interrupts |
 | `resetSideEncoderCount()` | None | Resets side movement count when gap confirmation starts |
 | `resetAllEncoderCounts()` | None | Resets all four encoder counts |
-| `selectSideEncoderForLeftMove()` | None | Selects M1 Front Left for left-side gap confirmation |
-| `selectSideEncoderForRightMove()` | None | Selects M1 Front Left for right-side gap confirmation |
+| `selectSideEncoderForLeftMove()` | None | Selects M3 Front Right for left-side gap confirmation |
+| `selectSideEncoderForRightMove()` | None | Selects M3 Front Right for right-side gap confirmation |
 | `getEncoderCount(int encoderIndex)` | 0-3 | Returns one encoder count |
-| `getSideEncoderCount()` | Active side encoder, or dummy mode | Returns only the selected encoder for the current left/right gap-confirm move |
+| `getSideEncoderCount()` | Active side encoder, or dummy mode | Returns only the selected encoder for the current left/right gap-confirm move; dummy mode increments by `DUMMY_ENCODER_COUNTS_PER_READ` |
 | `getSideTravelMm()` | Encoder count constants | Returns `encoderTurns * wheelCircumference + redundancy` |
 | `gapEntryDistanceReached()` | None | True when `sideTravel > robotDiagonal / 2` |
 
@@ -114,7 +114,10 @@ Gap-entry constants are currently:
 | `ROBOT_DIAGONAL_MM` | `283.0` | Approx. 20 cm x 20 cm robot diagonal |
 
 Both `LEFT_MOVE_ENCODER_INDEX` and `RIGHT_MOVE_ENCODER_INDEX` currently use
-M1 Front Left (`0`). `getSideTravelMm()` uses the absolute value of the selected
+M3 Front Right (`2`) because the encoder team confirmed M3 is used for
+left/right movement. The encoder/mechanical team also confirmed M1/M2 are
+front/back movement wheels and M3/M4 are left/right movement wheels.
+`getSideTravelMm()` uses the absolute value of the selected
 encoder count, so opposite movement direction still contributes positive
 travel distance.
 
@@ -143,8 +146,8 @@ enum RobotState {
 | Switch | Current Value | Effect |
 |---|---:|---|
 | `USE_DUMMY_MOTORS` | `false` | Motor commands write real PWM/digital outputs |
-| `USE_DUMMY_SENSORS` | `false` | Real Role 2 sensor inputs are used |
-| `USE_DUMMY_ENCODERS` | `false` | Real encoder interrupts are used |
+| `USE_DUMMY_SENSORS` | `true` | `readSensors()` returns dummy sensor sequence |
+| `USE_DUMMY_ENCODERS` | `true` | Encoder count increases by `DUMMY_ENCODER_COUNTS_PER_READ` |
 | `ENABLE_DEBUG_PRINT` | `true` | Serial Monitor prints sensor/action debug output |
 
 For full dummy mode without real motor motion, set `USE_DUMMY_MOTORS` back to
