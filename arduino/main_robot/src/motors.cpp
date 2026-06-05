@@ -38,6 +38,36 @@ static void stopSideMotors() {
   digitalWrite(A2_H_BRIDGE_IN2_PIN, LOW);
 }
 
+static bool sideSoftPwmIsOn() {
+  return (millis() % SIDE_SOFT_PWM_PERIOD_MS) < SIDE_SOFT_PWM_ON_MS;
+}
+
+static void writeSideLeftPins(bool enabled) {
+  if (!enabled) {
+    stopSideMotors();
+    return;
+  }
+
+  // M3/M4 are mounted opposite to the forward motors, so side direction is inverted.
+  digitalWrite(A1_H_BRIDGE_IN1_PIN, LOW);
+  digitalWrite(A1_H_BRIDGE_IN2_PIN, HIGH);
+  digitalWrite(A2_H_BRIDGE_IN1_PIN, LOW);
+  digitalWrite(A2_H_BRIDGE_IN2_PIN, HIGH);
+}
+
+static void writeSideRightPins(bool enabled) {
+  if (!enabled) {
+    stopSideMotors();
+    return;
+  }
+
+  // M3/M4 are mounted opposite to the forward motors, so side direction is inverted.
+  digitalWrite(A1_H_BRIDGE_IN1_PIN, HIGH);
+  digitalWrite(A1_H_BRIDGE_IN2_PIN, LOW);
+  digitalWrite(A2_H_BRIDGE_IN1_PIN, HIGH);
+  digitalWrite(A2_H_BRIDGE_IN2_PIN, LOW);
+}
+
 void initMotors() {
   pinMode(B1_FORWARD_PWM_PIN, OUTPUT);
   pinMode(B2_FORWARD_PWM_PIN, OUTPUT);
@@ -89,13 +119,9 @@ void moveLeft() {
     return;
   }
 
-  // R3 logic: M3 and M4 both run forward for left movement.
   stopForwardMotors();
   engageForwardBrakes();
-  digitalWrite(A1_H_BRIDGE_IN1_PIN, HIGH);
-  digitalWrite(A1_H_BRIDGE_IN2_PIN, LOW);
-  digitalWrite(A2_H_BRIDGE_IN1_PIN, HIGH);
-  digitalWrite(A2_H_BRIDGE_IN2_PIN, LOW);
+  writeSideLeftPins(sideSoftPwmIsOn());
 }  
 
 void moveRight() {
@@ -104,11 +130,7 @@ void moveRight() {
     return;
   }
 
-  // R3 logic: M3 and M4 both run reverse for right movement.
   stopForwardMotors();
   engageForwardBrakes();
-  digitalWrite(A1_H_BRIDGE_IN1_PIN, LOW);
-  digitalWrite(A1_H_BRIDGE_IN2_PIN, HIGH);
-  digitalWrite(A2_H_BRIDGE_IN1_PIN, LOW);
-  digitalWrite(A2_H_BRIDGE_IN2_PIN, HIGH);
+  writeSideRightPins(sideSoftPwmIsOn());
 }

@@ -18,8 +18,8 @@
 | D36 | `A1_H_BRIDGE_IN2_PIN` | M3_B side motor input, reverse |
 | D38 | `A2_H_BRIDGE_IN1_PIN` | M4_A side motor input, forward |
 | D40 | `A2_H_BRIDGE_IN2_PIN` | M4_B side motor input, reverse |
-| D3 | `B1_FORWARD_PWM_PIN` | B1 forward motor PWM, fixed at 130 |
-| D11 | `B2_FORWARD_PWM_PIN` | B2 forward motor PWM, fixed at 130 |
+| D3 | `B1_FORWARD_PWM_PIN` | B1 forward motor PWM, fixed at 32 |
+| D11 | `B2_FORWARD_PWM_PIN` | B2 forward motor PWM, fixed at 32 |
 | A4 | `FRONT_PHOTODIODE_PIN` | front photodiode, Role 2 validated analog output |
 | A5 | `REAR_PHOTODIODE_PIN` | rear photodiode, Role 2 validated analog output |
 
@@ -33,18 +33,18 @@ for Motor Shield Rev3 channel B direction and must not be used as an LED pin.
 
 | Pin | Function | Note |
 |---|---|---|
-| D3 | `B1_FORWARD_PWM_PIN` | B1 forward motor PWM, fixed at `FORWARD_PWM = 130` |
-| D11 | `B2_FORWARD_PWM_PIN` | B2 forward motor PWM, fixed at `FORWARD_PWM = 130` |
+| D3 | `B1_FORWARD_PWM_PIN` | B1 forward motor PWM, fixed at `FORWARD_PWM = 32` |
+| D11 | `B2_FORWARD_PWM_PIN` | B2 forward motor PWM, fixed at `FORWARD_PWM = 32` |
 | D12 | `FORWARD_MOTOR_A_DIRECTION_PIN` | A direction, HIGH for the Role 4 forward convention |
 | D13 | `FORWARD_MOTOR_B_DIRECTION_PIN` | B direction, LOW for the Role 4 forward convention |
 | D9 | `FORWARD_MOTOR_A_BRAKE_PIN` | A brake, HIGH in `stopMotors()`, LOW in `driveForward()` |
 | D8 | `FORWARD_MOTOR_B_BRAKE_PIN` | B brake, HIGH in `stopMotors()`, LOW in `driveForward()` |
-| D34/D36 | `A1_H_BRIDGE_IN1_PIN`, `A1_H_BRIDGE_IN2_PIN` | M3 side motor, digital R3 direction control |
-| D38/D40 | `A2_H_BRIDGE_IN1_PIN`, `A2_H_BRIDGE_IN2_PIN` | M4 side motor, digital R3 direction control |
+| D34/D36 | `A1_H_BRIDGE_IN1_PIN`, `A1_H_BRIDGE_IN2_PIN` | M3 side motor, inverted side direction control |
+| D38/D40 | `A2_H_BRIDGE_IN1_PIN`, `A2_H_BRIDGE_IN2_PIN` | M4 side motor, inverted side direction control |
 
 B1/B2 use Motor Shield Rev3 PWM/brake/direction control. M3/M4 each use one
-self-made H-bridge. Side movement follows the validated R3 logic: left sets
-M3/M4 forward, and right sets M3/M4 reverse.
+self-made H-bridge. Side movement is inverted from the original R3 logic: left
+sets M3/M4 reverse, and right sets M3/M4 forward.
 
 ## Encoder Pins
 

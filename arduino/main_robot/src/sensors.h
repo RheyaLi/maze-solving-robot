@@ -9,6 +9,9 @@ struct SensorData {
   bool frontClear;
   bool rearWallDetected;
 
+  int leftSideRaw;
+  int rightSideRaw;
+
   bool leftWallHit;
   bool rightWallHit;
 };

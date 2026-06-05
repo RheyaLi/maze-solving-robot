@@ -76,11 +76,11 @@ pio device monitor
 
 - Check [pin map](pin_map.md).
 - Check [interface spec](interface_spec.md).
-- Confirm M3/M4 H-bridge direction using the validated R3 logic: D34/D38 HIGH and D36/D40 LOW for left movement; D34/D38 LOW and D36/D40 HIGH for right movement.
+- Confirm M3/M4 H-bridge direction using the inverted side logic: D34/D38 LOW and D36/D40 HIGH for left movement; D34/D38 HIGH and D36/D40 LOW for right movement.
 - Confirm B1/B2 forward PWM wiring before running forward movement.
 - Confirm D14-D16 and D30 state LEDs indicate `STATE_MOVE_LEFT`, `STATE_MOVE_RIGHT`, `STATE_CONFIRM_GAP`, and `STATE_FORWARD`.
 - Confirm encoder channel A/B wiring on D2/D18/D19/D20 and D22/D24/D26/D28. Channel A uses `RISING`; channel B uses `INPUT_PULLUP`.
-- Confirm Role 2 sensor integration: switches are on D7/D4 in the main robot because D2/D3 are reserved, photodiodes are on A4/A5, front hysteresis is currently blocked >= 100 and clear <= 80, and rear wall threshold is 100.
+- Confirm Role 2 sensor integration: switches are on D7/D4 in the main robot because D2/D3 are reserved, photodiodes are on A4/A5, front wall detection is calibrated as `frontRaw > 200`, and rear wall threshold is 100.
 - Both `LEFT_MOVE_ENCODER_INDEX` and `RIGHT_MOVE_ENCODER_INDEX` currently use M3 Front Right because the encoder team confirmed M3 is used for left/right movement.
 - `USE_DUMMY_SENSORS` and `USE_DUMMY_ENCODERS` are currently `true` for integration testing with dummy inputs. Set them to `false` before running with real Role 2 sensors and real Role 4 encoder interrupts.
 - Test with wheels raised before testing in the maze.

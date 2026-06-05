@@ -3,6 +3,7 @@
 
 static volatile long encoderCounts[ENCODER_COUNT] = {0, 0, 0, 0};
 static int activeSideEncoderIndex = LEFT_MOVE_ENCODER_INDEX;
+static long lastPrintedEncoderCounts[ENCODER_COUNT] = {0, 0, 0, 0};
 
 static void updateEncoder(int encoderIndex) {
   const int encoderB = digitalRead(ENCODER_B_PINS[encoderIndex]);
@@ -91,17 +92,81 @@ long getEncoderCount(int encoderIndex) {
   return count;
 }
 
+long peekEncoderCount(int encoderIndex) {
+  if (encoderIndex < 0 || encoderIndex >= ENCODER_COUNT) {
+    return 0;
+  }
+
+  noInterrupts();
+  const long count = encoderCounts[encoderIndex];
+  interrupts();
+  return count;
+}
+
 long getSideEncoderCount() {
   return getEncoderCount(activeSideEncoderIndex);
 }
 
+static float encoderCountToDistanceMm(int encoderIndex, long count) {
+  if (encoderIndex < 0 || encoderIndex >= ENCODER_COUNT) {
+    return 0.0;
+  }
+
+  const long distanceCount = (count < 0) ? -count : count;
+  return (distanceCount * ENCODER_CALIBRATION_DISTANCE_MM) / ENCODER_15CM_COUNTS[encoderIndex];
+}
+
+float getEncoderDistanceMm(int encoderIndex) {
+  return encoderCountToDistanceMm(encoderIndex, peekEncoderCount(encoderIndex));
+}
+
 float getSideTravelMm() {
   const long count = getSideEncoderCount();
-  const long distanceCount = (count < 0) ? -count : count;
-  const float encoderTurns = distanceCount / ENCODER_COUNTS_PER_REV;
-  return encoderTurns * WHEEL_CIRCUMFERENCE_MM + GAP_ENTRY_REDUNDANCY_MM;
+  return encoderCountToDistanceMm(activeSideEncoderIndex, count) + GAP_ENTRY_REDUNDANCY_MM;
 }
 
 bool gapEntryDistanceReached() {
   return getSideTravelMm() > (ROBOT_DIAGONAL_MM / 2.0);
+}
+
+static const char* directionFromDelta(long delta) {
+  if (delta > 0) {
+    return "POS";
+  }
+  if (delta < 0) {
+    return "NEG";
+  }
+  return "STILL";
+}
+
+void printEncoders() {
+  Serial.print("Encoders");
+
+  for (int i = 0; i < ENCODER_COUNT; i++) {
+    const long count = peekEncoderCount(i);
+    const long delta = count - lastPrintedEncoderCounts[i];
+    lastPrintedEncoderCounts[i] = count;
+
+    Serial.print(" | M");
+    Serial.print(i + 1);
+    Serial.print(": ");
+    Serial.print(count);
+    Serial.print(" dir=");
+    Serial.print(directionFromDelta(delta));
+  }
+
+  const long sideCount = peekEncoderCount(activeSideEncoderIndex);
+  const float sideTravelMm =
+      encoderCountToDistanceMm(activeSideEncoderIndex, sideCount) + GAP_ENTRY_REDUNDANCY_MM;
+
+  Serial.print(" | activeSide=M");
+  Serial.print(activeSideEncoderIndex + 1);
+  Serial.print(" sideTravelMm=");
+  Serial.print(sideTravelMm, 1);
+
+  if (USE_DUMMY_ENCODERS) {
+    Serial.print(" | dummyEncoder=ON");
+  }
+
+  Serial.println();
 }

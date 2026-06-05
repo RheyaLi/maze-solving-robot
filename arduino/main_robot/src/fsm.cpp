@@ -8,11 +8,33 @@ static RobotState currentState = STATE_FORWARD;
 static RobotState previousState = STATE_FORWARD;
 
 static unsigned long gapStartTime = 0;
+static unsigned long leftHitStartTime = 0;
+static unsigned long rightHitStartTime = 0;
+
+static bool hitConfirmed(bool hit, unsigned long &hitStartTime) {
+  if (!hit) {
+    hitStartTime = 0;
+    return false;
+  }
+
+  if (hitStartTime == 0) {
+    hitStartTime = millis();
+    return false;
+  }
+
+  return millis() - hitStartTime >= SIDE_HIT_CONFIRM_MS;
+}
+
+static void resetSideHitConfirmTimers() {
+  leftHitStartTime = 0;
+  rightHitStartTime = 0;
+}
 
 void changeState(RobotState newState) {
   if (newState != currentState) {
     previousState = currentState;
     currentState = newState;
+    resetSideHitConfirmTimers();
 
     if (newState == STATE_CONFIRM_GAP) {
       if (previousState == STATE_MOVE_LEFT) {
@@ -36,6 +58,7 @@ void initFSM() {
   currentState = STATE_FORWARD;
   previousState = STATE_FORWARD;
   gapStartTime = 0;
+  resetSideHitConfirmTimers();
 }
 
 void updateDecision(const SensorData &s) {
@@ -64,7 +87,7 @@ void updateDecision(const SensorData &s) {
         changeState(STATE_CONFIRM_GAP);
       } 
       // If the robot hits the left side while moving left, move back right.
-      else if (s.leftWallHit) {
+      else if (hitConfirmed(s.leftWallHit, leftHitStartTime)) {
         changeState(STATE_MOVE_RIGHT);
       }
       break;
@@ -75,7 +98,7 @@ void updateDecision(const SensorData &s) {
         changeState(STATE_CONFIRM_GAP);
       } 
       // If the robot hits the right side while moving right, move back left.
-      else if (s.rightWallHit) {
+      else if (hitConfirmed(s.rightWallHit, rightHitStartTime)) {
         changeState(STATE_MOVE_LEFT);
       }
       break;
@@ -89,7 +112,8 @@ void updateDecision(const SensorData &s) {
           changeState(STATE_MOVE_RIGHT);
         }
       } 
-      else if (millis() - gapStartTime >= GAP_CONFIRM_MS && gapEntryDistanceReached()) {
+      else if (millis() - gapStartTime >= GAP_CONFIRM_MS &&
+               (gapEntryDistanceReached() || millis() - gapStartTime >= GAP_CONFIRM_TIMEOUT_MS)) {
         changeState(STATE_FORWARD);
       }
       break;

@@ -6,7 +6,7 @@
 const unsigned long DUMMY_PHASE_MS   = 2000;
 
 const int DUMMY_FRONT_CLEAR_RAW = 200;
-const int DUMMY_FRONT_BLOCKED_RAW = 500;
+const int DUMMY_FRONT_BLOCKED_RAW = 700;
 const int DUMMY_REAR_RAW = 200;
 
 const bool DUMMY_SIDE_CLEAR = false;
@@ -46,7 +46,7 @@ static bool switchStateIsHit(int stableState) {
 }
 
 static bool updateFrontBlockedState(int frontRaw) {
-  if (frontRaw >= FRONT_BLOCKED_THRESHOLD) {
+  if (frontRaw >= FRONT_WALL_THRESHOLD) {
     frontBlockedState = true;
   } else if (frontRaw <= FRONT_CLEAR_THRESHOLD) {
     frontBlockedState = false;
@@ -67,6 +67,8 @@ static SensorData readDummySensors() {
   s.frontBlocked = false;
   s.frontClear = true;
   s.rearWallDetected = false;
+  s.leftSideRaw = DUMMY_SIDE_CLEAR ? HIGH : LOW;
+  s.rightSideRaw = DUMMY_SIDE_CLEAR ? HIGH : LOW;
   s.leftWallHit = DUMMY_SIDE_CLEAR;
   s.rightWallHit = DUMMY_SIDE_CLEAR;
 
@@ -80,6 +82,7 @@ static SensorData readDummySensors() {
     s.frontRaw = DUMMY_FRONT_BLOCKED_RAW;
     s.frontBlocked = true;
     s.frontClear = false;
+    s.leftSideRaw = DUMMY_SIDE_HIT ? HIGH : LOW;
     s.leftWallHit = DUMMY_SIDE_HIT;
   } else if (phase == 3) {
     // Phase 3: front clear again -> FSM should confirm gap, then move forward.
@@ -128,13 +131,21 @@ SensorData readSensors() {
 
   s.leftWallHit = switchStateIsHit(leftState);
   s.rightWallHit = switchStateIsHit(rightState);
+  s.leftSideRaw = leftState;
+  s.rightSideRaw = rightState;
 
   return s;
 }
 
 void printSensors(const SensorData &s) {
+  const float frontVoltage = s.frontRaw * (5.0 / 1023.0);
+
   Serial.print("Front: ");
   Serial.print(s.frontRaw);
+
+  Serial.print(" | FrontVoltage: ");
+  Serial.print(frontVoltage);
+  Serial.print(" V");
 
   Serial.print(" | Rear: ");
   Serial.print(s.rearRaw);
@@ -148,9 +159,13 @@ void printSensors(const SensorData &s) {
   Serial.print(" | FrontClear: ");
   Serial.print(s.frontClear);
 
-  Serial.print(" | LeftHit: ");
-  Serial.print(s.leftWallHit);
+  Serial.print(" | left_side_return raw=");
+  Serial.print(s.leftSideRaw);
+  Serial.print(" hit=");
+  Serial.print(s.leftWallHit ? "YES" : "NO");
 
-  Serial.print(" | RightHit: ");
-  Serial.println(s.rightWallHit);
+  Serial.print(" | right_side_return raw=");
+  Serial.print(s.rightSideRaw);
+  Serial.print(" hit=");
+  Serial.println(s.rightWallHit ? "YES" : "NO");
 }

@@ -41,7 +41,7 @@ The dummy sensor values are defined near the top of `sensors.cpp`.
 const unsigned long DUMMY_PHASE_MS = 2000;
 
 const int DUMMY_FRONT_CLEAR_RAW = 200;
-const int DUMMY_FRONT_BLOCKED_RAW = 500;
+const int DUMMY_FRONT_BLOCKED_RAW = 700;
 const int DUMMY_REAR_RAW = 200;
 
 const bool DUMMY_SIDE_CLEAR = false;

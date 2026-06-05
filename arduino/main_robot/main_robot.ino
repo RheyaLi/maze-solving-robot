@@ -54,7 +54,18 @@ void loop() {
   updateStatusLeds();
 
   if (ENABLE_DEBUG_PRINT && millis() - lastDebugTime > DEBUG_INTERVAL_MS) {
+    Serial.print("STATE = ");
+    Serial.println(getStateName(getCurrentState()));
+
+    Serial.print("BlockedBooleans | frontBlocked=");
+    Serial.print(s.frontBlocked);
+    Serial.print(" | leftBlocked=");
+    Serial.print(s.leftWallHit);
+    Serial.print(" | rightBlocked=");
+    Serial.println(s.rightWallHit);
+
     printSensors(s);
+    printEncoders();
 
     Serial.print("ACTION = ");
     Serial.println(getStateName(getCurrentState()));

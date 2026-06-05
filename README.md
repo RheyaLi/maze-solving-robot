@@ -19,7 +19,7 @@ The main sketch connects three subsystems:
 - motors: `driveForward()`, `moveLeft()`, and `moveRight()` issue movement commands
 - encoders: `gapEntryDistanceReached()` checks whether the robot body has entered a detected gap
 
-B1/B2 PWM pins drive forward motion at the fixed `FORWARD_PWM` value. M3/M4 are separate self-made H-bridge side motors following the validated R3 logic: M3/M4 forward for left movement and M3/M4 reverse for right movement. Encoder readings are used for distance/gap checks only, not for motor speed control.
+B1/B2 PWM pins drive forward motion at the fixed `FORWARD_PWM` value. M3/M4 are separate self-made H-bridge side motors using inverted side logic: M3/M4 reverse for left movement and M3/M4 forward for right movement. Encoder readings are used for distance/gap checks only, not for motor speed control.
 
 ## Build and Upload
 
