@@ -32,9 +32,9 @@ const long DUMMY_ENCODER_COUNTS_PER_READ = 2;
 //   moves. Distance uses abs(count), so sign reversal is acceptable.
 // - Encoder/mechanical team confirmed M1/M2 are front/back movement wheels and
 //   M3/M4 are left/right movement wheels, so gap confirm currently uses M3.
-// - Re-measure ENCODER_CALIBRATION_COUNTS if the wheel, encoder trigger mode,
-//   or motor wiring changes. Current calibration is 147 counts for 150 mm.
-// - Tune GAP_CONFIRM_MS and GAP_ENTRY_REDUNDANCY_MM after full-car maze tests.
+// - Re-measure ENCODER_15CM_COUNTS if the wheel, encoder trigger mode, or
+//   motor wiring changes.
+// - Tune GAP_CONFIRM_ENCODER_COUNTS and GAP_ENTRY_REDUNDANCY_MM after full-car maze tests.
 // =============================
 
 // =============================
@@ -61,10 +61,10 @@ const int RIGHT_SIDE_SWITCH_PIN = 4;
 // ----- Side motor H-bridge pins -----
 // M3 and M4 are side motors controlled by two self-made H-bridges.
 // M3/M4 side direction is inverted from the original R3 motor logic.
-const int A1_H_BRIDGE_IN1_PIN = 34;
-const int A1_H_BRIDGE_IN2_PIN = 36;
-const int A2_H_BRIDGE_IN1_PIN = 38;
-const int A2_H_BRIDGE_IN2_PIN = 40;
+const int A1_H_BRIDGE_IN1_PIN = 44;
+const int A1_H_BRIDGE_IN2_PIN = 45;
+const int A2_H_BRIDGE_IN1_PIN = 46;
+const int A2_H_BRIDGE_IN2_PIN = 10;
 
 // Role 2 validated sensor wiring used D2/D3 for switches, but those conflict
 // with M1 encoder A (D2) and forward PWM (D3). Main integration keeps switches
@@ -81,10 +81,10 @@ const int ENCODER_COUNT = 4;
 const int ENCODER_A_PINS[ENCODER_COUNT] = {2, 18, 19, 20};
 const int ENCODER_B_PINS[ENCODER_COUNT] = {22, 24, 26, 28};
 
-// Use the M3 Front Right encoder for both left and right gap-confirm moves.
+// Use M3/M4 side encoders for gap-confirm moves.
 // Distance checks use abs(count), so the sign can differ by movement direction.
 const int LEFT_MOVE_ENCODER_INDEX = 2;
-const int RIGHT_MOVE_ENCODER_INDEX = 2;
+const int RIGHT_MOVE_ENCODER_INDEX = 3;
 
 // ----- Forward motor PWM pins -----
 // B1 and B2 only drive the robot forward. They are not connected through H-bridges.
@@ -107,16 +107,12 @@ const bool SIDE_SWITCHES_USE_INTERNAL_PULLUPS = false;
 const unsigned long SWITCH_DEBOUNCE_MS = 50;
 const unsigned long SIDE_HIT_CONFIRM_MS = 250;
 
-const int FRONT_WALL_THRESHOLD    = 80;
-const int FRONT_CLEAR_THRESHOLD   = 45;
-const int REAR_WALL_THRESHOLD     = 100;
+const int FRONT_WALL_THRESHOLD    = 105;
+const int FRONT_CLEAR_THRESHOLD   = 65;
+const int REAR_WALL_THRESHOLD     = 90;
 
-const int FORWARD_PWM = 50;
-
-// Side motor pins D34/D36/D38/D40 are not hardware-PWM pins on Mega, so side
-// movement is slowed with a simple software duty cycle.
-const unsigned long SIDE_SOFT_PWM_PERIOD_MS = 120;
-const unsigned long SIDE_SOFT_PWM_ON_MS = 33; // approx. PWM 70/255.
+const int FORWARD_PWM = 70;
+const int SIDE_PWM = 50;
 
 // ----- Encoder distance calibration -----
 // Measured calibration: manually moving 15 cm gives different counts on each
@@ -130,18 +126,19 @@ const float GAP_ENTRY_REDUNDANCY_MM = 20.0;
 const float ROBOT_DIAGONAL_MM = 260.0;  // Measured robot diagonal/side-entry basis: 26 cm.
 
 // ----- Encoder closed-loop motor balance -----
-// The controller compares distance in mm, not raw counts, because FB/LR encoder
-// counts per distance are different.
+// Closed-loop control compares distance in mm, not raw counts, because each
+// encoder has a different counts-per-distance calibration.
 const bool USE_ENCODER_CLOSED_LOOP = true;
 const float FORWARD_BALANCE_KP = 1.0;
 const int FORWARD_BALANCE_MAX_CORRECTION = 20;
-const float SIDE_BALANCE_KP = 0.7;
-const int SIDE_BALANCE_MAX_CORRECTION_MS = 16;
 
-// Timing
-// TODO: Confirm gap detection strategy. Default also requires front to stay clear for 300 ms.
-const unsigned long GAP_CONFIRM_MS     = 300;
-const unsigned long GAP_CONFIRM_TIMEOUT_MS = 1500;
+// Gap confirm
+// When front IR first sees clear while moving sideways, keep moving sideways
+// until M3/M4 side encoders have produced this many raw ticks. If front IR
+// becomes blocked before this count is reached, cancel the gap. After confirm,
+// drive forward by PASS_GAP_FORWARD_MM using the M1/M2 encoder distance formula.
+const long GAP_CONFIRM_ENCODER_COUNTS = 30;
+const float PASS_GAP_FORWARD_MM = 180.0;
 const unsigned long DEBUG_INTERVAL_MS  = 200;
 
 // Debug

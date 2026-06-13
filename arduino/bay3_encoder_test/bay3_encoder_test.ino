@@ -23,9 +23,11 @@ const char *ENCODER_NAMES[ENCODER_COUNT] = {
   "M4_RR"
 };
 
-// Measured calibration: manually moving 15 cm gives about 147 encoder counts.
-// Formula: distance_mm = abs(counts) * 150.0 / 147.0.
-const float ENCODER_CALIBRATION_COUNTS = 147.0;
+// Measured calibration: manually moving 15 cm gives different counts on each
+// encoder. Formula:
+// distance_mm = abs(counts) * ENCODER_CALIBRATION_DISTANCE_MM /
+//               ENCODER_15CM_COUNTS[encoderIndex].
+const float ENCODER_15CM_COUNTS[ENCODER_COUNT] = {237.0, 131.0, 233.0, 108.0};
 const float ENCODER_CALIBRATION_DISTANCE_MM = 150.0;
 const float TARGET_DISTANCE_MM = 150.0;
 const float TARGET_TOLERANCE_MM = 10.0;
@@ -88,9 +90,9 @@ void resetAllEncoderCounts() {
   }
 }
 
-float countToDistanceMm(long count) {
+float countToDistanceMm(int encoderIndex, long count) {
   const long absCount = (count < 0) ? -count : count;
-  return (absCount * ENCODER_CALIBRATION_DISTANCE_MM) / ENCODER_CALIBRATION_COUNTS;
+  return (absCount * ENCODER_CALIBRATION_DISTANCE_MM) / ENCODER_15CM_COUNTS[encoderIndex];
 }
 
 const char *directionFromDelta(long delta) {
@@ -129,7 +131,7 @@ void printEncoderEvidence() {
     const long delta = count - lastPrintedCounts[i];
     lastPrintedCounts[i] = count;
 
-    const float distanceMm = countToDistanceMm(count);
+    const float distanceMm = countToDistanceMm(i, count);
     distanceTotal += distanceMm;
 
     Serial.print(ENCODER_NAMES[i]);

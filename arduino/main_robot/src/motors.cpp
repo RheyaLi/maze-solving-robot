@@ -1,5 +1,6 @@
 #include "motors.h"
 #include "config.h"
+#include "encoders.h"
 
 // ----- Dummy motor output -----
 // Enable USE_DUMMY_MOTORS in config.h to print motor commands instead of writing pins.
@@ -17,8 +18,10 @@ static void stopForwardMotors() {
 }
 
 static void engageForwardBrakes() {
-  digitalWrite(FORWARD_MOTOR_A_BRAKE_PIN, HIGH);
-  digitalWrite(FORWARD_MOTOR_B_BRAKE_PIN, HIGH);
+  // Keep the forward pair fully unpowered when not driving forward.
+  // On this build, using brake HIGH caused unwanted FB motor movement.
+  digitalWrite(FORWARD_MOTOR_A_BRAKE_PIN, LOW);
+  digitalWrite(FORWARD_MOTOR_B_BRAKE_PIN, LOW);
 }
 
 static void releaseForwardBrakes() {
@@ -32,40 +35,70 @@ static void setForwardMotorDirection() {
 }
 
 static void stopSideMotors() {
-  digitalWrite(A1_H_BRIDGE_IN1_PIN, LOW);
-  digitalWrite(A1_H_BRIDGE_IN2_PIN, LOW);
-  digitalWrite(A2_H_BRIDGE_IN1_PIN, LOW);
-  digitalWrite(A2_H_BRIDGE_IN2_PIN, LOW);
+  analogWrite(A1_H_BRIDGE_IN1_PIN, 0);
+  analogWrite(A1_H_BRIDGE_IN2_PIN, 0);
+  analogWrite(A2_H_BRIDGE_IN1_PIN, 0);
+  analogWrite(A2_H_BRIDGE_IN2_PIN, 0);
 }
 
-static bool sideSoftPwmIsOn() {
-  return (millis() % SIDE_SOFT_PWM_PERIOD_MS) < SIDE_SOFT_PWM_ON_MS;
+static int clampInt(int value, int minValue, int maxValue) {
+  if (value < minValue) {
+    return minValue;
+  }
+  if (value > maxValue) {
+    return maxValue;
+  }
+  return value;
 }
 
-static void writeSideLeftPins(bool enabled) {
-  if (!enabled) {
-    stopSideMotors();
-    return;
+static int clampPwm(int pwm) {
+  return clampInt(pwm, 0, 255);
+}
+
+static int forwardBalanceCorrection() {
+  if (!USE_ENCODER_CLOSED_LOOP) {
+    return 0;
   }
 
-  // M3/M4 are mounted opposite to the forward motors, so side direction is inverted.
-  digitalWrite(A1_H_BRIDGE_IN1_PIN, LOW);
-  digitalWrite(A1_H_BRIDGE_IN2_PIN, HIGH);
-  digitalWrite(A2_H_BRIDGE_IN1_PIN, LOW);
-  digitalWrite(A2_H_BRIDGE_IN2_PIN, HIGH);
+  const float m1DistanceMm = getEncoderDistanceMm(0);
+  const float m2DistanceMm = getEncoderDistanceMm(1);
+  const float errorMm = m1DistanceMm - m2DistanceMm;
+  const int correction = (int)(errorMm * FORWARD_BALANCE_KP);
+  return clampInt(
+      correction,
+      -FORWARD_BALANCE_MAX_CORRECTION,
+      FORWARD_BALANCE_MAX_CORRECTION);
 }
 
-static void writeSideRightPins(bool enabled) {
-  if (!enabled) {
-    stopSideMotors();
-    return;
-  }
+static void writeSideMotor3Left() {
+  analogWrite(A1_H_BRIDGE_IN1_PIN, SIDE_PWM);
+  analogWrite(A1_H_BRIDGE_IN2_PIN, 0);
+}
 
-  // M3/M4 are mounted opposite to the forward motors, so side direction is inverted.
-  digitalWrite(A1_H_BRIDGE_IN1_PIN, HIGH);
-  digitalWrite(A1_H_BRIDGE_IN2_PIN, LOW);
-  digitalWrite(A2_H_BRIDGE_IN1_PIN, HIGH);
-  digitalWrite(A2_H_BRIDGE_IN2_PIN, LOW);
+static void writeSideMotor4Left() {
+  analogWrite(A2_H_BRIDGE_IN1_PIN, SIDE_PWM);
+  analogWrite(A2_H_BRIDGE_IN2_PIN, 0);
+}
+
+static void writeSideMotor3Right() {
+  // Right correction is used when the left wall switch is hit.
+  analogWrite(A1_H_BRIDGE_IN1_PIN, 0);
+  analogWrite(A1_H_BRIDGE_IN2_PIN, SIDE_PWM);
+}
+
+static void writeSideMotor4Right() {
+  analogWrite(A2_H_BRIDGE_IN1_PIN, 0);
+  analogWrite(A2_H_BRIDGE_IN2_PIN, SIDE_PWM);
+}
+
+static void writeSidePinsContinuous(bool leftDirection) {
+  if (leftDirection) {
+    writeSideMotor3Left();
+    writeSideMotor4Left();
+  } else {
+    writeSideMotor3Right();
+    writeSideMotor4Right();
+  }
 }
 
 void initMotors() {
@@ -109,8 +142,11 @@ void driveForward() {
   stopSideMotors();
   setForwardMotorDirection();
   releaseForwardBrakes();
-  analogWrite(B1_FORWARD_PWM_PIN, FORWARD_PWM);
-  analogWrite(B2_FORWARD_PWM_PIN, FORWARD_PWM);
+
+  // If M1 has travelled farther than M2, reduce M1 PWM and increase M2 PWM.
+  const int correction = forwardBalanceCorrection();
+  analogWrite(B1_FORWARD_PWM_PIN, clampPwm(FORWARD_PWM - correction));
+  analogWrite(B2_FORWARD_PWM_PIN, clampPwm(FORWARD_PWM + correction));
 }
 
 void moveLeft() {
@@ -121,7 +157,7 @@ void moveLeft() {
 
   stopForwardMotors();
   engageForwardBrakes();
-  writeSideLeftPins(sideSoftPwmIsOn());
+  writeSidePinsContinuous(true);
 }  
 
 void moveRight() {
@@ -132,5 +168,5 @@ void moveRight() {
 
   stopForwardMotors();
   engageForwardBrakes();
-  writeSideRightPins(sideSoftPwmIsOn());
+  writeSidePinsContinuous(false);
 }

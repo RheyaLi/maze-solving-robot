@@ -24,10 +24,10 @@ void updateStatusLeds() {
     return;
   }
 
-  digitalWrite(FORWARD_LED_PIN, state == STATE_FORWARD ? HIGH : LOW);
+  digitalWrite(FORWARD_LED_PIN, (state == STATE_FORWARD || state == STATE_PASS_GAP) ? HIGH : LOW);
   digitalWrite(MOVE_LEFT_LED_PIN, state == STATE_MOVE_LEFT ? HIGH : LOW);
   digitalWrite(MOVE_RIGHT_LED_PIN, state == STATE_MOVE_RIGHT ? HIGH : LOW);
-  digitalWrite(CONFIRM_GAP_LED_PIN, state == STATE_CONFIRM_GAP ? HIGH : LOW);
+  digitalWrite(CONFIRM_GAP_LED_PIN, isGapConfirming() ? HIGH : LOW);
 }
 
 void setup() {
@@ -69,6 +69,9 @@ void loop() {
 
     Serial.print("ACTION = ");
     Serial.println(getStateName(getCurrentState()));
+
+    Serial.print("GapConfirming = ");
+    Serial.println(isGapConfirming());
 
     lastDebugTime = millis();
   }

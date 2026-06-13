@@ -7,7 +7,7 @@ enum RobotState {
   STATE_FORWARD,
   STATE_MOVE_LEFT,
   STATE_MOVE_RIGHT,
-  STATE_CONFIRM_GAP,
+  STATE_PASS_GAP,
   STATE_STOPPING
 };
 
@@ -17,6 +17,7 @@ void updateDecision(const SensorData &s);
 void executeAction();
 
 RobotState getCurrentState();
+bool isGapConfirming();
 const char* getStateName(RobotState state);
 
 #endif
